@@ -1,0 +1,158 @@
+description	log10pvalue	representative
+viral process	10.5546	viral process
+biological adhesion	1.4704	biological adhesion
+cell-substrate adhesion	3.5356	cell-substrate adhesion
+cell-matrix adhesion	2.1696	cell-substrate adhesion
+cell adhesion	1.4561	cell-substrate adhesion
+developmental process	1.4739	developmental process
+response to oxygen levels	4.9476	response to oxygen levels
+peptidyl-amino acid modification	1.4669	response to oxygen levels
+positive regulation of cellular process	4.237	response to oxygen levels
+positive regulation of cellular protein metabolic process	2.9881	response to oxygen levels
+response to nitrogen compound	3.8787	response to oxygen levels
+response to oxygen-containing compound	4.1893	response to oxygen levels
+regulation of protein metabolic process	1.8997	response to oxygen levels
+positive regulation of protein metabolic process	2.9545	response to oxygen levels
+response to topologically incorrect protein	4.2135	response to oxygen levels
+transcription from RNA polymerase II promoter	2.8031	response to oxygen levels
+regulation of response to stimulus	1.4082	response to oxygen levels
+positive regulation of RNA metabolic process	5.3131	response to oxygen levels
+regulation of transcription from RNA polymerase II promoter	3.1186	response to oxygen levels
+protein modification by small protein conjugation or removal	1.5557	response to oxygen levels
+positive regulation of gene expression	4.2129	response to oxygen levels
+cellular response to abiotic stimulus	1.942	response to oxygen levels
+response to abiotic stimulus	4.3344	response to oxygen levels
+positive regulation of macromolecule metabolic process	6.3544	response to oxygen levels
+response to lipid	1.9461	response to oxygen levels
+cellular response to growth factor stimulus	1.3458	response to oxygen levels
+cellular response to chemical stimulus	4.8195	response to oxygen levels
+response to growth factor	1.9351	response to oxygen levels
+positive regulation of macromolecule biosynthetic process	4.1951	response to oxygen levels
+cellular response to organic substance	6.5621	response to oxygen levels
+response to organic substance	6.7835	response to oxygen levels
+cellular response to cytokine stimulus	2.9044	response to oxygen levels
+response to decreased oxygen levels	4.0828	response to oxygen levels
+cellular response to increased oxygen levels	2.2463	response to oxygen levels
+response to endogenous stimulus	2.6236	response to oxygen levels
+positive regulation of transcription from RNA polymerase II promoter involved in cellular response to chemical stimulus	1.7362	response to oxygen levels
+response to cytokine	3.1289	response to oxygen levels
+positive regulation of metabolic process	5.3989	response to oxygen levels
+negative regulation of transcription from RNA polymerase II promoter	1.5071	response to oxygen levels
+response to stress	2.0239	response to oxygen levels
+response to organonitrogen compound	4.5506	response to oxygen levels
+cellular protein modification process	1.64	response to oxygen levels
+cellular component organization or biogenesis	3.08	cellular component organization or biogenesis
+regulation of cellular catabolic process	4.766	regulation of cellular catabolism
+regulation of steroid metabolic process	2.1149	regulation of cellular catabolism
+ERAD pathway	1.7871	regulation of cellular catabolism
+cellular protein catabolic process	3.7267	regulation of cellular catabolism
+cellular catabolic process	3.5373	regulation of cellular catabolism
+organonitrogen compound catabolic process	3.8649	regulation of cellular catabolism
+regulation of cellular ketone metabolic process	1.3557	regulation of cellular catabolism
+regulation of carbohydrate catabolic process	2.7712	regulation of cellular catabolism
+regulation of catabolic process	5.1256	regulation of cellular catabolism
+small molecule metabolic process	1.5788	regulation of cellular catabolism
+regulation of phosphorus metabolic process	1.3957	regulation of cellular catabolism
+neuron projection development	5.0629	neuron projection development
+radial glial cell differentiation	2.0211	neuron projection development
+cellular component organization	2.5661	neuron projection development
+vesicle organization	2.2359	neuron projection development
+adherens junction organization	2.6431	neuron projection development
+regulation of protein localization	1.4419	neuron projection development
+regulation of localization	1.8902	neuron projection development
+reproductive structure development	1.5705	neuron projection development
+regulation of anatomical structure morphogenesis	1.4731	neuron projection development
+membrane budding	4.7347	neuron projection development
+supramolecular fiber organization	2.9723	neuron projection development
+multicellular organism development	1.4037	neuron projection development
+vesicle-mediated transport	5.5179	neuron projection development
+endosomal transport	2.1862	neuron projection development
+regulation of vesicle-mediated transport	3.4	neuron projection development
+neurogenesis	1.6966	neuron projection development
+anatomical structure morphogenesis	5.1598	neuron projection development
+protein localization	1.6886	neuron projection development
+cell part morphogenesis	2.9362	neuron projection development
+cellular component morphogenesis	2.0682	neuron projection development
+regulation of microtubule cytoskeleton organization	1.6267	neuron projection development
+regulation of cytoskeleton organization	4.3887	neuron projection development
+regulation of endocytosis	1.8487	neuron projection development
+regulation of epidermis development	2.0703	neuron projection development
+regulation of organelle organization	2.3194	neuron projection development
+macromolecule localization	1.955	neuron projection development
+regulation of supramolecular fiber organization	3.7002	neuron projection development
+anatomical structure development	2.3677	neuron projection development
+embryo development	1.979	neuron projection development
+regulated exocytosis	3.7878	neuron projection development
+peptide transport	2.0767	neuron projection development
+cytoskeleton organization	1.3671	neuron projection development
+animal organ morphogenesis	4.9102	neuron projection development
+organelle organization	1.8932	neuron projection development
+cellular component disassembly	1.3214	neuron projection development
+face morphogenesis	1.6926	neuron projection development
+skeletal system morphogenesis	3.2884	neuron projection development
+regulation of cellular component organization	6.8853	neuron projection development
+positive regulation of cellular component organization	2.6745	neuron projection development
+cell projection organization	3.0752	neuron projection development
+reproductive system development	1.8535	neuron projection development
+gland development	2.2357	neuron projection development
+system development	2.3239	neuron projection development
+Golgi vesicle budding	2.6116	neuron projection development
+cellular localization	2.5019	neuron projection development
+vesicle targeting, to, from or within Golgi	1.4846	neuron projection development
+establishment of localization in cell	3.6872	neuron projection development
+regulation of anatomical structure size	1.727	regulation of anatomical structure size
+carbohydrate derivative biosynthetic process	2.2042	carbohydrate derivative biosynthesis
+ncRNA transcription	1.6582	carbohydrate derivative biosynthesis
+snRNA transcription from RNA polymerase II promoter	1.6004	carbohydrate derivative biosynthesis
+regulation of neuron death	3.2769	regulation of neuron death
+regulation of cell death	2.2275	regulation of neuron death
+neuron death	3.4113	regulation of neuron death
+extrinsic apoptotic signaling pathway	1.7182	regulation of neuron death
+granulocyte activation	3.5452	granulocyte activation
+myeloid leukocyte mediated immunity	2.9513	granulocyte activation
+immune system development	2.6967	granulocyte activation
+hemopoiesis	3.1104	granulocyte activation
+hematopoietic stem cell differentiation	1.3105	granulocyte activation
+regulation of hematopoietic stem cell differentiation	1.4603	granulocyte activation
+actin filament-based process	3.5275	actin filament-based process
+catabolic process	3.511	catabolism
+carbohydrate derivative metabolic process	1.4212	carbohydrate derivative metabolism
+positive regulation of biological process	3.2234	positive regulation of biological process
+negative regulation of biological process	1.3266	positive regulation of biological process
+cell death	1.8365	cell death
+positive regulation of molecular function	1.9429	positive regulation of molecular function
+positive regulation of catalytic activity	1.6958	positive regulation of molecular function
+phosphorus metabolic process	2.046	phosphorus metabolism
+response to endoplasmic reticulum stress	3.7159	response to endoplasmic reticulum stress
+regulation of JNK cascade	2.0746	response to endoplasmic reticulum stress
+regulation of protein kinase activity	2.0244	response to endoplasmic reticulum stress
+regulation of signaling	3.4682	response to endoplasmic reticulum stress
+phosphate-containing compound metabolic process	1.6013	response to endoplasmic reticulum stress
+positive regulation of signaling	2.8573	response to endoplasmic reticulum stress
+cell surface receptor signaling pathway involved in cell-cell signaling	1.5946	response to endoplasmic reticulum stress
+ephrin receptor signaling pathway	2.8958	response to endoplasmic reticulum stress
+vascular endothelial growth factor receptor signaling pathway	1.9671	response to endoplasmic reticulum stress
+positive regulation of NIK/NF-kappaB signaling	1.5989	response to endoplasmic reticulum stress
+cellular response to topologically incorrect protein	3.2156	response to endoplasmic reticulum stress
+Wnt signaling pathway	2.3764	response to endoplasmic reticulum stress
+intracellular signal transduction	2.0641	response to endoplasmic reticulum stress
+regulation of cell communication	3.0916	response to endoplasmic reticulum stress
+positive regulation of cell communication	2.819	response to endoplasmic reticulum stress
+cell-cell signaling	1.9808	response to endoplasmic reticulum stress
+regulation of DNA-templated transcription in response to stress	2.4575	response to endoplasmic reticulum stress
+regulation of protein modification by small protein conjugation or removal	1.9475	response to endoplasmic reticulum stress
+small GTPase mediated signal transduction	1.3389	response to endoplasmic reticulum stress
+response to ischemia	1.5816	response to endoplasmic reticulum stress
+enzyme linked receptor protein signaling pathway	2.3731	response to endoplasmic reticulum stress
+transmembrane receptor protein tyrosine kinase signaling pathway	2.1803	response to endoplasmic reticulum stress
+regulation of Ras protein signal transduction	2.175	response to endoplasmic reticulum stress
+cellular response to stress	4.7016	response to endoplasmic reticulum stress
+NIK/NF-kappaB signaling	1.6169	response to endoplasmic reticulum stress
+positive regulation of signal transduction	2.4733	response to endoplasmic reticulum stress
+regulation of signal transduction	2.9914	response to endoplasmic reticulum stress
+regulation of cellular response to stress	1.6631	response to endoplasmic reticulum stress
+regulation of response to stress	2.2432	response to endoplasmic reticulum stress
+protein phosphorylation	2.2213	response to endoplasmic reticulum stress
+cell-cell signaling by wnt	2.7223	response to endoplasmic reticulum stress
+signal transduction by protein phosphorylation	2.0677	response to endoplasmic reticulum stress
+regulation of biological quality	2.1737	regulation of biological quality

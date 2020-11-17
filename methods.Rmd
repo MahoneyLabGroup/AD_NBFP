@@ -1,0 +1,718 @@
+---
+title: SystemsSystem-level analysis of Alzheimer’s disease prioritizes candidate genes
+  for neurodegeneration
+author: "Jeff Brabec"
+date: "11/11/2020"
+output: html_document
+---
+
+## I. Project Setup
+
+### A. Package Setup
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+all.packages <- c("tidyverse", 
+                  "ggplot2", 
+                  "here", 
+                  "conflicted", 
+                  "gprofiler2", 
+                  "R.utils", 
+                  "doParallel", 
+                  "DescTools", 
+                  "knitr",
+                  "igraph",
+                  "magrittr", 
+                  "RColorBrewer", 
+                  "biomaRt",
+                  "plotly",
+                  "ggrepel",
+                  "janitor",
+                  "disgenet2r",
+                  "pROC",
+                  "tidytext",
+                  "ggpubr",
+                  "ggpmisc",
+                  "viridis",
+                  "scales")
+for(i in 1:length(all.packages)){library(all.packages[i], character.only = TRUE)} 
+conflict_prefer("filter", "dplyr")
+```
+
+### B. Directory Setup
+
+```{r}
+project.dir <- here()
+code.dir <- here("code")
+data.dir <- here("data")
+results.dir <- here("results")
+figure.dir <- here("figures")
+
+#ADNI Results Directories
+results.adni.dir <- here("adni")
+
+results.adni.av.dir <- here("adni", "adni_av")
+results.adni.hv.dir <- here("adni", "adni_hv")
+
+results.adni.hippocampus.net.hv.dir <- here("adni", "adni_hv", "results_adni_hippocampus_net_hv")
+results.adni.amygdala.net.av.dir <- here("adni", "adni_av", "results_adni_amygdala_net_av")
+
+#MetaGWAS Results Directories
+results.mwas.dir <- here("mwas")
+
+results.mwas.amygdala.net.dx.dir <- here("mwas", "mwas_amygdala_net_dx")
+results.mwas.hippocampus.net.dx.dir <- here("mwas", "mwas_hippocampus_net_dx")
+```
+
+### C. Source the Code Used in the Project
+
+```{r source_code}
+all.fun.dir <- list.files(code.dir, full.names = TRUE)
+for(i in 1:length(all.fun.dir)){
+  all.fun <- list.files(all.fun.dir[i], full.names = TRUE)
+  for(j in 1:length(all.fun)){source(all.fun[j])}
+}
+```
+
+### D. Download Tissue Networks
+
+Download HumanBase functional tissue network. The specified networks used in this analysis were downloaded on July 13, 2020. The function `download.tissue.network()` will download the specified network (top edges) and place it in the specified directory. To view all available networks and naming paradigm visit [HumanBase](https://hb.flatironinstitute.org/download).
+
+```{r download_tiss_nets}
+hum_hippocampus.net <- here("data", "hippocampus_top.Rdata")
+if(!file.exists(hum_hippocampus.net)){
+  download.tissue.net(tissue = "hippocampus", organism = "human", project.dir = data.dir)
+}
+
+hum_amygdala.net <- here("data", "amygdala_top.Rdata")
+if(!file.exists(hum_amygdala.net)){
+  download.tissue.net(tissue = "amygdala", organism = "human", project.dir = data.dir)
+}
+
+```
+
+## II. Genes
+
+### A. Load MAGMA Results
+
+The MAGMA output will have columns for gene, chromosome, start and stop positions, number of SNPs, N number of samples, Z statistic, and p-value.
+
+```{r}
+#Hippocampal Volume
+hv_adni_genes <- read_table(here("data", "hipp_10k_genes.genes.out"), 
+                            col_names = TRUE) %>% 
+  mutate(across(starts_with("GENE"), as.character)) %>% 
+  clean_names()
+
+#Amygdala Volume
+av_adni_genes <- read_table(here("data", "amyg_10k_genes.genes.out"),
+                            col_names = TRUE) %>% 
+  mutate(across(starts_with("GENE"), as.character)) %>% 
+  clean_names()
+
+#MetaGWAS 
+mwas_genes <- read_table(here("data", "sum_stats_genes.genes.out"),
+                         col_names = TRUE) %>% 
+  mutate(across(starts_with("GENE"), as.character)) %>% 
+  clean_names()
+```
+
+### B. Gene Entrez ID Conversion
+
+Use gprofiler function gconvert to convert the gene entrez IDs from the MAGMA output to gene names. Then join the original data together with the converted gene names to get the final dataset to be used for down-stream processing.
+
+```{r}
+#Amygdala Volume
+av_adni_gconvert <- gconvert(av_adni_genes$gene,
+                             organism = "hsapiens",
+                             target = "ENTREZGENE",
+                             numeric_ns = "ENTREZGENE_ACC") %>% 
+  filter(!duplicated(name), !duplicated(input)) %>% 
+  as_tibble() %>% 
+  dplyr::select(gene = input, name) %>% 
+  mutate(across(gene, as.character))
+
+av_adni_genes %<>% inner_join(av_adni_gconvert, by = "gene")
+
+#Hippocampus Volume
+hv_adni_gconvert <- gconvert(hv_adni_genes$gene,
+                             organism = "hsapiens",
+                             target = "ENTREZGENE",
+                             numeric_ns = "ENTREZGENE_ACC") %>% 
+  filter(!duplicated(name), !duplicated(input)) %>% 
+  as_tibble() %>% 
+  dplyr::select(gene = input, name) %>% 
+  mutate(across(gene, as.character))
+
+hv_adni_genes %<>% inner_join(hv_adni_gconvert, by = "gene")
+
+#MetaGWAS
+mwas_gconvert <- gconvert(mwas_genes$gene,
+                          organism = "hsapiens",
+                          target = "ENTREZGENE",
+                          numeric_ns = "ENTREZGENE_ACC") %>% 
+  filter(!duplicated(name), !duplicated(input)) %>% 
+  as_tibble() %>% 
+  dplyr::select(gene = input, name) %>%  
+  mutate(across(gene, as.character))
+
+mwas_genes %<>% inner_join(mwas_gconvert, by = "gene")
+```
+
+## IV. Significant Genes
+
+Find significant genes by filtering the gene list for genes with a p-value below 0.01. These genes will be used to train the SVM. (Note: only gene entrez IDs are needed for training)
+
+```{r sig_genes}
+mwas_sig_genes <- mwas_genes %>% 
+  filter(p < 0.01)
+```
+
+## V. SVM
+
+We ran the SVM analysis separately for each of the gene lists pulled from the epilepsy GWAS paper (here we use JAE). The SVMs were trained to distinguish genes in the significant gene list from randomly chosen genes from outside the list. We use the function generate.triage.models() to accomplish this, which uses the `svm` function in the package `e1071` [@e1071]. The features used by the SVM are the edge weights between all genes and the genes in the JAE sig gene set. For each of the 100 SVM models, we used the JAE sig gene set genes as the true positives, while the true negatives were selected at random from outside of that gene set. Each true negative set was selected to have the same number of genes as were in the true positive set.
+
+### A. Train SVM using the significant genes and the specified functional network
+
+```{r train_SVM}
+#set paramaters
+n.SVM <- 100 #number of SVMs to run
+n.cores = detectCores()-1 #The number of cores to use for parallel processing
+
+##read in amygdala network
+amygdala_net <- read_rds(here("data", "amygdala_top.RData"))
+
+
+#1. MWAS Diagnosis | Amygdala Network
+generate.triage.models(path = results.mwas.dir, 
+                       project.name = "results_mwas_amygdala_net_dx", 
+                       trait.genes = mwas_sig_genes$GENE,
+                       fgn = amygdala_net, 
+                       n.trials = n.SVM, 
+                       cluster.modules = FALSE, 
+                       use.SVD = FALSE, 
+                       verbose = TRUE, 
+                       n.cores = n.cores)
+##remove amygdala network once svms have run to free up RAM
+rm(amygdala_net)
+
+##read in hippocampus network
+hippocampus_net <- here(data.dir, "hippocampus_top.RData")
+
+#2. MWAS Diagnosis | Hippocampus Network
+generate.triage.models(path = results.mwas.dir, 
+                       project.name = "results_mwas_hippocampus_net_dx", 
+                       trait.genes = mwas_sig_genes$GENE,
+                       fgn = hippocampus_net, 
+                       n.trials = n.SVM, 
+                       cluster.modules = FALSE, 
+                       use.SVD = FALSE, 
+                       verbose = TRUE, 
+                       n.cores = n.cores)
+
+##remove hippocampus network once svms have run to free up RAM
+rm(hippocampus_net)
+```
+
+### B. ROC curves
+
+Following training of the SVM models, we evaluted them by generating ROC curves to test how well the models separate genes annotated to the network from genes in the rest of the genome. To do this, use the svm.ROC function, which plots the false positive rate against the true positive rate of the SVM model across the full range of prediction values. An area under the ROC curve (AUC) indicates how well the model does overall (AUC 0.5 means model performs at random chance, AUC 1 means model has perfect classification)
+
+```{r ROC_curve}
+svm.ROC(results.mwas.amygdala.net.dx.dir, n.cores = n.cores, plot.results = TRUE)
+svm.ROC(results.mwas.hippocampus.net.dx.dir, n.cores = n.cores, plot.results = TRUE)
+```
+
+### C. Apply the trained models to genes
+
+After training the SVM models, we use them to classify each gene, where each gene recieves a score from each SVM indicating whether the model identifies it as part of the [network] gene list (a positive score) or not part of the gene list (negative score). The score.candidates function writes out all of the values to two csv tables (Candidate.Gene.SVM.Scores.csv and Candidate.Gene.FP.Rates.csv). The function also plots boxplots of the distributions of the SVM scores and the false positive (FP) rates for each gene in two jpgs (Candidate.Gene.SVM.Scores.jpg, and Candidate.Gene.FP.Rates.jpg). Plots are ordered by mean value. The genes that are on the left are classified confidently by the SVM as being related to the [network] gene list. The distributions of their SVM scores do not cross 0. The genes on the right hand side are classified confidently by the SVM as not being related to the [network] gene list. The genes in between are less confidently classified across the SVM trials.
+
+```{r score_candidates}
+score.candidates(results.mwas.dir, candidate.genes = mwas_genes$GENE)
+```
+
+## VI. Integrate Gene Information with SVM Output
+
+We integrated the SVM scores and FP Rates with the original gene information (including positional information). The function `merge.svm.gene.info.fp()` takes the original gene table (output from MAGMA plus the converted gene names) and adds the mean SVM score and mean FP rate to the genes. It writes out a table for each module with the information for each gene, including the original information from the gene table (entrez ID and gene name), SVM score, and FP rate (Candidate.Gene.Results.rds).
+
+### A. Merge SVM results with GWAS info
+
+```{r merge_info}
+if(FALSE){
+
+#MWAS Diagnosis | Amygdala Network
+mwas_amygdala_net_fin_tab <- merge.gene.svm.fp(results.mwas.amygdala.net.dx.dir, mwas_genes, gene.column.name = "gene")
+
+#MWAS Diagnosis | Hippocampus Network
+mwas_hippocampus_net_fin_tab <- merge.gene.svm.fp(results.mwas.hippocampus.net.dx.dir, mwas_genes, gene.column.name = "gene")
+}
+```
+
+### B. Read in already merged tables
+
+```{r}
+mwas_amygdala_net_fin_tab <- 
+  read_rds(here("mwas/mwas_amygdala_net_dx/results_mwas_amygdala_net_dx/Module1/Candidate.Gene.Results.rds"))
+
+mwas_hippocampus_net_fin_tab <- 
+  read_rds(here("mwas/mwas_hippocampus_net_dx/results_mwas_hippocampus_net_dx/Module1/Candidate.Gene.Results.rds"))
+```
+
+
+## VII. Gene Scores and Plotting
+
+Each gene is scored based on the integration of SVM false positive (FP) rates, GWAS p-values, and potentially other metrics given the dataset (e.g., expression data). Given two variables (e.g., -log p-value and -log SVM FP rate), the score is based on the number of genes in the area covered by its x,y position. An individual gene with a lot of genes covered in their area will be ranked higher than a gene with fewer. Given only positional information and SVM output, genes can be ranked on their FP rates and mapped by their position (and significant GWAS genes can also be designated from the rest).
+
+## A. Plotting Integrated Ranking Within GWAS Method (Fig4)
+
+```{r integrated_rankings}
+
+amyg_adni_scores <- av_adni_genes %>% 
+  dplyr::select(name, av_p = p)
+mwas_amyg_scores <- mwas_amygdala_net_fin_tab %>% 
+  dplyr::select(name, mwas_amyg_fp = mean_fp_rate)
+
+amygdala_scores <- amyg_adni_scores %>% 
+  inner_join(mwas_amyg_scores, by = "name") %>% 
+  mutate(
+    av_log_p = -log10(av_p),
+    mwas_log_amyg_fp = -log10(mwas_amyg_fp)
+  ) %>% 
+  rowwise() %>%
+  mutate(comb_score_amyg = sum(av_log_p > .$av_log_p & mwas_log_amyg_fp > .$mwas_log_amyg_fp)) %>%
+  ungroup() %>%
+  mutate(comb_score_amyg = comb_score_amyg/n())
+
+hipp_adni_scores <- hv_adni_genes %>% 
+  dplyr::select(name, hv_p = p)
+mwas_hipp_scores <- mwas_hippocampus_net_fin_tab %>% 
+  dplyr::select(name, mwas_hipp_fp = mean_fp_rate)
+
+hippocampus_scores <- hipp_adni_scores %>% 
+  inner_join(mwas_hipp_scores, by = "name") %>% 
+  mutate(
+    hv_log_p = -log10(hv_p),
+    mwas_log_hipp_fp = -log10(mwas_hipp_fp)
+    ) %>%
+  rowwise() %>%
+  mutate(comb_score_hipp = sum(hv_log_p > .$hv_log_p & mwas_log_hipp_fp > .$mwas_log_hipp_fp)) %>%
+  ungroup() %>%
+  mutate(comb_score_hipp = comb_score_hipp/n())
+
+
+#1. Amygdala Volume | Amygdala Network
+amyg_scores_comb_plot <- gene_rank_plotr(score_tab = amygdala_scores,
+                gene_col = "name",
+                log_pval_col = "av_log_p",
+                log_score_comp_col = "mwas_log_amyg_fp",
+                set_ceiling = FALSE) +
+  labs(x = "Amygdala Volume Positional Score",
+       y = "Functional Score",
+       title = "Amygdala Network",
+       color = "Combined\nScore") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 36),
+    legend.text = element_text(size = 25),
+    axis.title.y = element_text(size = 36),
+    axis.title.x = element_text(size = 36),
+    axis.text.y = element_text(size = 25),
+    axis.text.x = element_text(size = 25),
+    title = element_text(size = 42),
+    panel.grid = element_line(color = "#000000"),
+    panel.grid.minor = element_blank()
+    )
+
+#2. Hippocampus Volume | Hippocampus Network
+hipp_scores_comb_plot <- gene_rank_plotr(score_tab = hippocampus_scores,
+                gene_col = "name",
+                log_pval_col = "hv_log_p",
+                log_score_comp_col = "mwas_log_hipp_fp",
+                set_ceiling = FALSE) +
+  labs(x = "Hippocampus Volume Positional Score",
+       y = "Functional Score",
+       title = "Hippocampus Network",
+       color = "Combined\nScore") +
+  expand_limits(x = 16) +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 36),
+    legend.text = element_text(size = 25),
+    axis.title.y = element_text(size = 36),
+    axis.title.x = element_text(size = 36),
+    axis.text.y = element_text(size = 25),
+    axis.text.x = element_text(size = 25),
+    title = element_text(size = 42),
+    panel.grid = element_line(color = "#000000"),
+    panel.grid.minor = element_blank()
+    )
+
+## Interactive plotly plots:
+gene_rank_plotlyr(score_tab = amygdala_scores,
+                  gene_col = "name",
+                  log_p_col = "av_log_p",
+                  log_comp_col = "mwas_log_amyg_fp",
+                  title = "Amygdala Interactive Ranking Plot")
+
+gene_rank_plotlyr(score_tab = hippocampus_scores,
+                  gene_col = "name",
+                  log_p_col = "hv_log_p",
+                  log_comp_col = "mwas_log_hipp_fp",
+                  title = "Hippocampus Interactive Ranking Plot")
+```
+
+
+### B. Generating P-value Comparison Plots
+
+#### Compairing ADNI Volume GWAS P-values (Fig 2C)
+```{r}
+amyg_hipp_scores <- amygdala_scores %>% 
+  inner_join(hippocampus_scores, by = "name") %>% 
+  select(name, av_log_p, hv_log_p, mwas_log_amyg_fp, mwas_log_hipp_fp, comb_score_amyg, comb_score_hipp) %>% 
+  rowwise() %>%
+  mutate(comb_score = sum(hv_log_p > .$hv_log_p & av_log_p > .$av_log_p)) %>%
+  ungroup() %>%
+  mutate(comb_score = comb_score/n())
+  
+amyg_hipp_pval_comparison <- amyg_hipp_scores %>% 
+  ggplot(aes(hv_log_p, av_log_p)) +
+  geom_point(color = "grey", size = 5) +
+  geom_point(data = amyg_hipp_scores %>% 
+               filter(hv_log_p > -log10(0.01)), color = "#F0F921FF", size = 6) +
+  geom_point(data = amyg_hipp_scores %>% 
+               filter(av_log_p > -log10(0.01)), color = "#F48849FF", size = 6) +
+  geom_point(data = amyg_hipp_scores %>% 
+               filter(hv_log_p > -log10(0.01) & av_log_p > -log10(0.01)), color = "#5402A3FF", size = 6) +
+  geom_text_repel(data = amyg_hipp_scores %>% 
+                    filter(av_log_p < -log10(0.01)) %>% 
+                    slice_max(hv_log_p, n = 5), 
+                  aes(label = name, fontface = "italic"), 
+                  size = 10,
+                  nudge_x = 4, #for hippocampus
+                  direction = "y",
+                  xlim = c(5, Inf)) +
+  geom_text_repel(data = amyg_hipp_scores %>% 
+                    filter(hv_log_p < -log10(0.01)) %>% 
+                    slice_max(av_log_p, n = 5), 
+                  aes(label = name, fontface = "italic"), 
+                  size = 10,
+                  nudge_y = 4,
+                  direction = "x",
+                  ylim = c(5, Inf)) +
+  geom_text_repel(data = amyg_hipp_scores %>% 
+                    filter(hv_log_p > -log10(0.01) & av_log_p > -log10(0.01)) %>% 
+                    slice_max(comb_score, n = 5), 
+                  aes(label = name, fontface = "italic"), 
+                  size = 10,
+                  xlim = c(6.5, Inf)) +
+  geom_hline(yintercept = -log10(0.01), linetype = "dashed", size = 3) +
+  geom_vline(xintercept = -log10(0.01), linetype = "dashed", size = 3) +
+  labs(
+    x = "Hippocampus Volume GWAS -log10 P-Value",
+    y = "Amygdala Volume GWAS -log10 P-Value"
+  ) +
+  expand_limits(x = 16) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_text(size = 36),
+    axis.title.x = element_text(size = 36),
+    axis.text.y = element_text(size = 25),
+    axis.text.x = element_text(size = 25),
+    panel.grid.major = element_line(color = "#000000"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+
+#### Compairing MWAS p-values to ADNI Volume GWAS p-values (Figs 2D and E)
+```{r}
+mwas_genes_to_bind <- mwas_genes %>% 
+  dplyr::select(name, mwas_p = p)
+
+av_adni_genes_to_bind <- av_adni_genes %>% 
+  dplyr::select(name, av_p = p)
+
+hv_adni_genes_to_bind <- hv_adni_genes %>% 
+  dplyr::select(name, hv_p = p)
+
+hv_mwas_comp_tab <- hv_adni_genes_to_bind %>% 
+  inner_join(mwas_genes_to_bind, by = "name") %>% 
+  mutate(
+    hv_log_p = -log10(hv_p),
+    mwas_log_p = -log10(mwas_p)
+  )
+
+av_mwas_comp_tab <- av_adni_genes_to_bind %>% 
+  inner_join(mwas_genes_to_bind, by = "name") %>% 
+  mutate(
+    av_log_p = -log10(av_p),
+    mwas_log_p = -log10(mwas_p)
+  )
+
+av_mwas_comp_tab_processed <- av_mwas_comp_tab %>%
+  rowwise() %>%
+  mutate(comb_score = sum(av_log_p > .$av_log_p & mwas_log_p > .$mwas_log_p)) %>%
+  ungroup() %>%
+  mutate(comb_score = comb_score/n()) %>% 
+  mutate(p_ceiling = ifelse(mwas_log_p > 20, 20, mwas_log_p))
+
+av_mwas_p_value_comp_plot <- ggplot(av_mwas_comp_tab_processed,
+                                    aes(x = av_log_p, y = p_ceiling, label = name)) +
+  geom_point(color = "grey", size = 5) +
+  geom_hline(yintercept = 19, linetype = "dashed", color  = "grey50", size = 3) +
+  geom_text(aes(x = 8, y = 18, label = "Genes with -log10 P > 20 transformed to 20 for readability"), size = 10, color = "grey50") +
+  geom_point(data = subset(av_mwas_comp_tab_processed, av_log_p > -log10(0.01)), color = "#F48849FF", size = 6) +
+  geom_text_repel(data = av_mwas_comp_tab_processed %>% 
+                    filter(mwas_log_p < -log10(0.01)) %>% 
+                    slice_max(av_log_p, n = 5), 
+                  aes(label = name, fontface = "italic"), 
+                  size = 10,
+                  nudge_x = 2,
+                  direction = "y",
+                  ylim = c(2, Inf)) +
+  geom_point(data = subset(av_mwas_comp_tab_processed, mwas_log_p > -log10(0.01)), color = "#21908CFF", size = 6) +
+  geom_text_repel(data = av_mwas_comp_tab_processed %>%
+                    filter(av_log_p < -log10(0.01)) %>% 
+                    slice_max(mwas_log_p, n = 5), 
+                  aes(label = name, fontface = "italic"),
+                  size = 10,
+                  nudge_y = 4,
+                  direction = "y",
+                  xlim = c(2, Inf)) +
+  geom_point(data = av_mwas_comp_tab_processed %>% 
+               filter(av_log_p > -log10(0.01) & mwas_log_p > -log10(0.01)), color = "#440154FF", size = 6) +
+  geom_text_repel(data = av_mwas_comp_tab_processed %>% 
+                    filter(av_log_p > -log10(0.01) & mwas_log_p > -log10(0.01)) %>% 
+                    slice_max(comb_score, n = 5), 
+                  aes(label = name, fontface = "italic"), 
+                  size = 10) +
+  geom_hline(yintercept = -log10(0.01), linetype = "dashed", size = 3) +
+  geom_vline(xintercept = -log10(0.01), linetype = "dashed", size = 3) +
+  labs(
+    x = "ADNI Amygdala Volume GWAS -log10 P-value",
+    y = "MetaGWAS -log10 P-value"
+  ) +
+  expand_limits(y = 21) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.y = element_text(size = 36),
+    axis.title.x = element_text(size = 36),
+    axis.text.y = element_text(size = 25),
+    axis.text.x = element_text(size = 25),
+    panel.grid.major = element_line(color = "#000000"),
+    panel.grid.minor = element_blank()
+  )
+
+
+hv_mwas_comp_tab_processed <- hv_mwas_comp_tab %>%
+  rowwise() %>%
+  mutate(comb_score = sum(hv_log_p > .$hv_log_p & mwas_log_p > .$mwas_log_p)) %>%
+  ungroup() %>%
+  mutate(comb_score = comb_score/n()) %>% 
+  mutate(p_ceiling = ifelse(mwas_log_p > 20, 20, mwas_log_p))
+
+hv_mwas_p_value_comp_plot <- ggplot(hv_mwas_comp_tab_processed,
+                                    aes(x = hv_log_p, y = p_ceiling, label = name)) +
+  geom_point(color = "grey", size = 5) +
+  geom_hline(yintercept = 19, linetype = "dashed", color  = "grey50", size = 3) +
+  geom_text(aes(x = 8.5, y = 18, label = "Genes with -log10 P > 20 transformed to 20 for redability"), size = 10, color = "grey50") +
+  geom_point(data = subset(hv_mwas_comp_tab_processed, hv_log_p > -log10(0.01)), color = "#F0F921FF", size = 6) +
+  geom_text_repel(data = hv_mwas_comp_tab_processed %>% 
+                    filter(mwas_log_p < -log10(0.01)) %>% 
+                    slice_max(hv_log_p, n = 5), 
+                  aes(label = name, fontface = "italic"), 
+                  size = 10,
+                  nudge_x = 3,
+                  direction = "y",
+                  ylim = c(2, Inf)) +
+  geom_point(data = subset(hv_mwas_comp_tab_processed, mwas_log_p > -log10(0.01)), color = "#21908CFF", size = 6) +
+  geom_text_repel(data = hv_mwas_comp_tab_processed %>%
+                    filter(hv_log_p < -log10(0.01)) %>% 
+                    slice_max(mwas_log_p, n = 5), 
+                  aes(label = name, fontface = "italic"), 
+                  size = 10,
+                  nudge_y = 4,
+                  direction = "y",
+                  xlim = c(2, Inf)) +
+  geom_point(data = hv_mwas_comp_tab_processed %>% 
+               filter(hv_log_p > -log10(0.01) & mwas_log_p > -log10(0.01)), color = "#440154FF", size = 6) +
+  geom_text_repel(data = hv_mwas_comp_tab_processed %>% 
+                    filter(hv_log_p > -log10(0.01) & mwas_log_p > -log10(0.01)) %>% 
+                    slice_max(comb_score, n = 5), 
+                  aes(label = name, fontface = "italic"), 
+                  size = 10) +
+  geom_hline(yintercept = -log10(0.01), linetype = "dashed", size = 3) +
+  geom_vline(xintercept = -log10(0.01), linetype = "dashed", size = 3) +
+  labs(
+    x = "ADNI Hippocampus Volume GWAS -log10 P-value",
+    y = "MetaGWAS -log10 P-value"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.y = element_text(size = 36),
+    axis.title.x = element_text(size = 36),
+    axis.text.y = element_text(size = 25),
+    axis.text.x = element_text(size = 25),
+    panel.grid.major = element_line(color = "#000000"),
+    panel.grid.minor = element_blank()
+  )
+```
+
+
+#### Pie chart generation (Fig 5)
+```{r}
+amyg_comb_score_revigo <- read_delim(here("results/REVIGO_treemap_amyg_comb_converted.csv"), delim = "\t")
+
+amyg_comb_score_revigo_for_plotting <- amyg_comb_score_revigo %>% 
+  count(representative) %>% 
+  rowwise() %>% 
+  mutate(perc = n/sum(.$n)) %>% 
+  mutate(plot_groups = ifelse(perc > .04, representative, "Other")) %>% 
+  ungroup() %>% 
+  count(plot_groups) %>% 
+  rowwise() %>% 
+  mutate(perc = n/sum(.$n)) %>% 
+  ungroup() %>% 
+  mutate(plot_groups = fct_reorder(plot_groups, perc*100))
+
+amyg_comb_score_revigo_for_plotting %>% 
+  ggplot(aes("", perc, fill = plot_groups)) + 
+  geom_bar(width = 1, stat = 'identity') +
+  geom_text(aes(x = 1.75, label = percent(perc)), 
+            size = 7,
+            position = position_stack(vjust = 0.5)) +
+  coord_polar("y", start=0) +
+  labs(title = "Amygdala Combined Score Functional Enrichment",
+       fill = "GO Term and Proportion of Biological Process") +
+  scale_fill_manual(values = cividis(n = 5)) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 20),
+    panel.border = element_blank(),
+    panel.grid=element_blank(),
+    axis.ticks = element_blank(),
+    plot.title=element_text(size=36, face="bold", hjust = 0.5),
+    legend.title = element_text(size = 30, face = "bold"),
+    legend.text = element_text(size = 25)
+  )
+
+amyg_pval_revigo <- read_delim(here("results/REVIGO_treemap_amyg_pval_converted.csv"), delim = "\t")
+
+amyg_pval_revigo_for_plotting <- amyg_pval_revigo %>% 
+  count(representative) %>% 
+  rowwise() %>% 
+  mutate(perc = n/sum(.$n)) %>% 
+  mutate(plot_groups = ifelse(perc > .04, representative, "Other")) %>% 
+  ungroup() %>% 
+  count(plot_groups) %>% 
+  rowwise() %>% 
+  mutate(perc = n/sum(.$n)) %>% 
+  ungroup() %>% 
+  mutate(plot_groups = fct_reorder(plot_groups, perc*100))
+
+amyg_pval_revigo_for_plotting %>% 
+  ggplot(aes("", perc, fill = plot_groups)) + 
+  geom_bar(width = 1, stat = 'identity') +
+  geom_text(aes(x = 1.75, label = percent(perc)), 
+            size = 7,
+            position = position_stack(vjust = 0.5)) +
+  coord_polar("y", start=0) +
+  labs(title = str_wrap("Amygdala Volume GWAS P-value Functional Enrichment"),
+       fill = "GO Term and Proportion of Biological Process") +
+  scale_fill_manual(values = cividis(n = 7)) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 20),
+    panel.border = element_blank(),
+    panel.grid=element_blank(),
+    axis.ticks = element_blank(),
+    plot.title=element_text(size=36, face="bold", hjust = 0.5),
+    legend.title = element_text(size = 30, face = "bold"),
+    legend.text = element_text(size = 25)
+  ) 
+
+hipp_comb_score_revigo <- read_delim(here("results/REVIGO_treemap_hipp_comb_converted.csv"), delim = "\t")
+
+hipp_comb_score_revigo_for_plotting <- hipp_comb_score_revigo %>% 
+  count(representative) %>% 
+  rowwise() %>% 
+  mutate(perc = n/sum(.$n)) %>% 
+  mutate(plot_groups = ifelse(perc > .04, representative, "Other")) %>% 
+  ungroup() %>% 
+  count(plot_groups) %>% 
+  rowwise() %>% 
+  mutate(perc = n/sum(.$n)) %>% 
+  ungroup() %>% 
+  mutate(plot_groups = fct_reorder(plot_groups, perc*100))
+
+hipp_comb_score_revigo_for_plotting %>% 
+  ggplot(aes("", perc, fill = plot_groups)) + 
+  geom_bar(width = 1, stat = 'identity') +
+  geom_text(aes(x = 1.75, label = percent(perc)), 
+            size = 7,
+            position = position_stack(vjust = 0.5)) +
+  coord_polar("y", start=0) +
+  labs(title = str_wrap("Hippocampus Combined Score Functional Enrichment"),
+       fill = "GO Term and Proportion of Biological Process") +
+  scale_fill_manual(values = plasma(n = 7)) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 20),
+    panel.border = element_blank(),
+    panel.grid=element_blank(),
+    axis.ticks = element_blank(),
+    plot.title=element_text(size=36, face="bold", hjust = 0.5),
+    legend.title = element_text(size = 30, face = "bold"),
+    legend.text = element_text(size = 25)
+  ) 
+
+hipp_pval_revigo <- read_delim(here("results/REVIGO_treemap_hipp_pval_converted.csv"), delim = "\t")
+
+hipp_pval_revigo_for_plotting <- hipp_pval_revigo %>% 
+  count(representative) %>% 
+  rowwise() %>% 
+  mutate(perc = n/sum(.$n)) %>% 
+  mutate(plot_groups = ifelse(perc > .04, representative, "Other")) %>% 
+  ungroup() %>% 
+  count(plot_groups) %>% 
+  rowwise() %>% 
+  mutate(perc = n/sum(.$n)) %>% 
+  ungroup() %>% 
+  mutate(plot_groups = fct_reorder(plot_groups, perc*100))
+
+hipp_pval_revigo_for_plotting %>% 
+  ggplot(aes("", perc, fill = plot_groups)) + 
+  geom_bar(width = 1, stat = 'identity') +
+  geom_text(aes(x = 1.75, label = percent(perc)), 
+            size = 7,
+            position = position_stack(vjust = 0.5)) +
+  coord_polar("y", start=0) +
+  labs(title = str_wrap("Hippocampus Volume P-value Functional Enrichment"),
+       fill = "GO Term and Proportion of Biological Process") +
+  scale_fill_manual(values = plasma(n = 7)) +
+  theme_minimal() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 20),
+    panel.border = element_blank(),
+    panel.grid=element_blank(),
+    axis.ticks = element_blank(),
+    plot.title=element_text(size=36, face="bold", hjust = 0.5),
+    legend.title = element_text(size = 30, face = "bold"),
+    legend.text = element_text(size = 25)
+  ) 
+```
+

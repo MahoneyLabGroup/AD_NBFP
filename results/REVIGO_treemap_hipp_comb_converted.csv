@@ -1,0 +1,98 @@
+description	log10pvalue	representative
+regulation of catabolic process	5.1656	regulation of catabolism
+positive regulation of cellular process	3.1151	regulation of catabolism
+regulation of cellular catabolic process	3.0015	regulation of catabolism
+transcription from RNA polymerase II promoter	4.5725	regulation of catabolism
+positive regulation of RNA metabolic process	3.6001	regulation of catabolism
+regulation of transcription from RNA polymerase II promoter	4.1416	regulation of catabolism
+ERAD pathway	3.0727	regulation of catabolism
+protein catabolic process	2.7742	regulation of catabolism
+positive regulation of gene expression	2.6343	regulation of catabolism
+snRNA transcription	1.3481	regulation of catabolism
+positive regulation of macromolecule metabolic process	5.1612	regulation of catabolism
+positive regulation of metabolic process	4.1546	regulation of catabolism
+organonitrogen compound catabolic process	2.73	regulation of catabolism
+negative regulation of transcription from RNA polymerase II promoter	2.3653	regulation of catabolism
+positive regulation of macromolecule biosynthetic process	2.2767	regulation of catabolism
+negative regulation of amyloid precursor protein catabolic process	1.877	regulation of catabolism
+glycosyl compound catabolic process	1.616	regulation of catabolism
+peptide transport	3.5972	peptide transport
+protein import	2.088	peptide transport
+macromolecule localization	2.14	peptide transport
+regulation of epithelial cell migration	1.3882	peptide transport
+exocytosis	1.987	peptide transport
+establishment of protein localization to organelle	1.3207	peptide transport
+organic substance transport	1.7671	peptide transport
+nitrogen compound transport	2.3354	peptide transport
+vesicle-mediated transport	2.3321	peptide transport
+regulation of cellular localization	2.1412	peptide transport
+positive regulation of cellular protein localization	2.8221	peptide transport
+cellular localization	5.448	peptide transport
+establishment of localization in cell	5.4674	peptide transport
+ameboidal-type cell migration	1.4069	peptide transport
+protein localization	2.4605	peptide transport
+response to endoplasmic reticulum stress	6.2017	response to endoplasmic reticulum stress
+positive regulation of JUN kinase activity	1.338	response to endoplasmic reticulum stress
+positive regulation of NIK/NF-kappaB signaling	1.6933	response to endoplasmic reticulum stress
+cellular response to topologically incorrect protein	5.5989	response to endoplasmic reticulum stress
+response to topologically incorrect protein	5.1371	response to endoplasmic reticulum stress
+response to cytokine	1.8922	response to endoplasmic reticulum stress
+cellular response to stress	3.9808	response to endoplasmic reticulum stress
+cellular response to hormone stimulus	2.0629	response to endoplasmic reticulum stress
+intrinsic apoptotic signaling pathway	1.5077	response to endoplasmic reticulum stress
+cellular response to gonadotropin stimulus	1.3242	response to endoplasmic reticulum stress
+apoptotic signaling pathway	2.9092	response to endoplasmic reticulum stress
+cellular response to chemical stimulus	3.3764	response to endoplasmic reticulum stress
+ER-nucleus signaling pathway	1.9333	response to endoplasmic reticulum stress
+regulation of cellular response to stress	1.3715	response to endoplasmic reticulum stress
+regulation of response to stress	2.6309	response to endoplasmic reticulum stress
+cellular response to organic substance	4.7716	response to endoplasmic reticulum stress
+response to organic substance	4.0806	response to endoplasmic reticulum stress
+apoptotic process	1.4286	response to endoplasmic reticulum stress
+face development	2.2847	face development
+neuron projection development	1.7264	face development
+face morphogenesis	2.1501	face development
+chordate embryonic development	2.0384	face development
+anterior/posterior pattern specification	1.4244	face development
+cellular component organization or biogenesis	1.5284	cellular component organization or biogenesis
+viral process	6.1344	viral process
+modulation by virus of host process	1.4843	viral process
+positive regulation of viral transcription	2.5861	viral process
+macroautophagy	2.4889	macroautophagy
+autophagy	2.6105	autophagy
+cell death	1.8817	cell death
+glycosylation	1.7471	glycosylation
+nucleoside diphosphate phosphorylation	1.4855	glycosylation
+nucleotide phosphorylation	1.6106	glycosylation
+histone modification	3.9944	histone modification
+membrane protein intracellular domain proteolysis	1.4062	histone modification
+regulation of cellular component size	1.4263	histone modification
+regulation of myoblast fusion	1.4377	histone modification
+regulation of protein complex stability	1.3244	histone modification
+peptidyl-lysine modification	1.8939	histone modification
+histone deubiquitination	1.7369	histone modification
+positive regulation of catalytic activity	2.373	histone modification
+positive regulation of aspartic-type peptidase activity	1.9391	histone modification
+regulation of aspartic-type peptidase activity	1.6465	histone modification
+positive regulation of molecular function	2.8027	histone modification
+regulation of cellular component organization	2.25	histone modification
+cell projection organization	2.453	histone modification
+cellular protein modification process	1.3741	histone modification
+catabolic process	6.2893	catabolism
+carbohydrate derivative metabolic process	3.412	carbohydrate derivative metabolism
+positive regulation of biological process	1.7251	positive regulation of biological process
+cell activation	1.4157	cell activation
+myeloid cell activation involved in immune response	3.8334	myeloid cell activation involved in immune response
+antigen processing and presentation of peptide antigen	1.4106	myeloid cell activation involved in immune response
+response to endogenous stimulus	1.8291	myeloid cell activation involved in immune response
+T cell receptor signaling pathway	1.7603	myeloid cell activation involved in immune response
+positive regulation of response to cytokine stimulus	2.4532	myeloid cell activation involved in immune response
+cellular response to granulocyte macrophage colony-stimulating factor stimulus	1.3657	myeloid cell activation involved in immune response
+response to granulocyte macrophage colony-stimulating factor	1.3657	myeloid cell activation involved in immune response
+interferon-gamma-mediated signaling pathway	2.5763	myeloid cell activation involved in immune response
+antigen processing and presentation	1.5128	myeloid cell activation involved in immune response
+response to stress	1.3121	myeloid cell activation involved in immune response
+cellular response to cytokine stimulus	1.4038	myeloid cell activation involved in immune response
+regulation of defense response to virus by virus	1.8008	myeloid cell activation involved in immune response
+glycoprotein metabolic process	2.2199	glycoprotein metabolism
+protein glycosylation	1.506	glycoprotein metabolism
