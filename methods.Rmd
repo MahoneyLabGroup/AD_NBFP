@@ -1,19 +1,63 @@
 ---
-title: SystemsSystem-level analysis of Alzheimer’s disease prioritizes candidate genes
+title: System-level analysis of Alzheimer’s disease prioritizes candidate genes
   for neurodegeneration
-author: "Jeff Brabec"
-date: "11/11/2020"
-output: html_document
+author: "Jeffrey L. Brabec, Montana Kay Lara, Anna L. Tyler, J. Matthew Mahoney"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: 
+  html_document:
+    code_folding: hide
+    collapsed: no
+    toc: yes
+    toc_float: yes
+bibliography
 ---
 
-## I. Project Setup
+This workflow accompanies the paper "System-level analysis of Alzheimer's disease prioritizes candidate genes for neurodegeneration". It contains all of the data and code to replicate the results and figures in the manuscript with a few key exceptions. The results presented in the manuscript were partially generated using data from the Alzheimer's Disease Neuroimaging Initiative [(ADNI)](http://adni.loni.usc.edu). We cannot provide SNP-level summary statistics, nor can we provide the phenotypic information used to generate figures 2A and 2B. However, the rest of the R analysis pipeline is included from the gene-level summary statistics. ADNI summary statistics were calculated by us using PLINK 1.9 (Cite Chang et al. 2015) while the meta-GWAS summary statistics were obtained from the website of [Jansen et al. 2019](https://ctg.cncr.nl/documents/p1651/AD_sumstats_Jansenetal_2019sept.txt.gz), the lab that generated them.
+
+The purpose of this project was to develop a novel method integrating GWAS statistics and functional scores, derived from network-based functional prediction (NBFP), to prioritize novel Alzheimer's Disease (AD) genes. The majority of AD GWAS studies conducted to date have utilized case-control data to identify single nucleotide polymorphisms (SNPs) that segregate with disease. These analyses have identified several genes that drive most of the heritability of AD, such as *APOE*, *APP*, and *PSEN1/2*, however, they do not have the biological resolution to identify variants that could be driving tissue or cell level processes that lead to AD phenotypes such as neurodegeneration, reactive astrocytosis, and the build-up of amyloid-plaques and tau-tangles.
+
+We therefore decided to utilize brain-region volume phenotypes available through the ADNI to run a GWAS to identify genes which were associated with changes in hippocampal and amygdalar volume. Our ultimate goal was to identify novel gene candidates for AD-specific neurodegeneration.
+
+Our methodology prioritizes genes based on their functional significance, derived from our NBFP pipeline and based on tissue-relevance (e.g. hippocampus or amygdala). This method has been adapted from the work flow developed in Tyler et al. 2019, and based on the methodology described in Guan et al. 2010 in which SVMs were used to predict functional associations with mammalian phenotype (MP) ontology terms. We use SVMs to determine which genes are functionally associated with AD in specific hippocampal or amygdalar contexts.
+
+[Expand on important details and trim other bits]
+
+## I. Setup
+
+This analysis requires a range of R packages, some of which are available from [CRAN](https://cran.r-project.org) and some of which are available from [Bioconductor](http://bioconductor.org). We've included a comprehensive list of the packages below how to install them. **Please note that this workflow was generated in R 3.6.3 and has not been tested in later versions of the software.**
+
+### Package installation
+
+```{r install, include = FALSE}
+cran_pkgs <- c("tidyverse",
+               "here",
+               "conflicted",
+               "gprofiler2",
+               "R.utils",
+               "doParallel",
+               "DescTools",
+               "knitr",
+               "igraph",
+               "RColorBrewer",
+               "plotly",
+               "ggrepel",
+               "janitor",
+               "tidytext",
+               "ggpubr",
+               "ggpmisc",
+               "viridis",
+               "scales")
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(pkgs = "biomaRt")
+```
 
 ### A. Package Setup
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 all.packages <- c("tidyverse", 
-                  "ggplot2", 
                   "here", 
                   "conflicted", 
                   "gprofiler2", 
@@ -22,14 +66,11 @@ all.packages <- c("tidyverse",
                   "DescTools", 
                   "knitr",
                   "igraph",
-                  "magrittr", 
                   "RColorBrewer", 
                   "biomaRt",
                   "plotly",
                   "ggrepel",
                   "janitor",
-                  "disgenet2r",
-                  "pROC",
                   "tidytext",
                   "ggpubr",
                   "ggpmisc",
@@ -91,11 +132,20 @@ if(!file.exists(hum_amygdala.net)){
 
 ```
 
+### E. Set SVM Hyper-Parameters
+
+```{r}
+#set paramaters
+n.SVM <- 100 #number of SVMs to run
+n.cores = detectCores()-1 #The number of cores to use for parallel processing
+
+```
+
 ## II. Genes
 
 ### A. Load MAGMA Results
 
-The MAGMA output will have columns for gene, chromosome, start and stop positions, number of SNPs, N number of samples, Z statistic, and p-value.
+SNP-level summary statistics were retrieved from the ADNI and Jansen et al. 2019 as stated above. We mapped SNP-level statistics to gene-level using Multi-marker Analysis of GenoMic Annotation [(MAGMA)](<https://ctg.cncr.nl/software/magma>). We used a 10kb annotation window around each gene and used the NCBI hg37 reference genome. LD estimations were done using the 1000 Genome's project CEU population. The MAGMA output will have columns for gene, chromosome, start and stop positions, number of SNPs, N number of samples, Z statistic, and p-value.
 
 ```{r}
 #Hippocampal Volume
@@ -119,7 +169,7 @@ mwas_genes <- read_table(here("data", "sum_stats_genes.genes.out"),
 
 ### B. Gene Entrez ID Conversion
 
-Use gprofiler function gconvert to convert the gene entrez IDs from the MAGMA output to gene names. Then join the original data together with the converted gene names to get the final dataset to be used for down-stream processing.
+The networks that we obtain from [HumanBase](https://hb.flatironinstitute.org) name genes using Entrez IDs, however for visualization and follow-up we'll need the actual gene symbols. To obtain the gene symbols we use the `gprofiler2` function `gconvert()` to convert the gene Entrez IDs from the MAGMA output to gene symbols. Then, the original data is joined together with the converted gene names to get the final dataset to be used for down-stream processing.
 
 ```{r}
 #Amygdala Volume
@@ -159,26 +209,22 @@ mwas_gconvert <- gconvert(mwas_genes$gene,
 mwas_genes %<>% inner_join(mwas_gconvert, by = "gene")
 ```
 
-## IV. Significant Genes
+## III. Significant Genes (Positional Candidates)
 
-Find significant genes by filtering the gene list for genes with a p-value below 0.01. These genes will be used to train the SVM. (Note: only gene entrez IDs are needed for training)
+Find significant genes by filtering the gene list for genes with a p-value below 0.01. These genes will be used to train the SVM. (Note: only gene Entrez IDs are needed for training) These genes represent positional candidates.
 
 ```{r sig_genes}
 mwas_sig_genes <- mwas_genes %>% 
   filter(p < 0.01)
 ```
 
-## V. SVM
+## IV. SVM
 
 We ran the SVM analysis separately for each of the gene lists pulled from the epilepsy GWAS paper (here we use JAE). The SVMs were trained to distinguish genes in the significant gene list from randomly chosen genes from outside the list. We use the function generate.triage.models() to accomplish this, which uses the `svm` function in the package `e1071` [@e1071]. The features used by the SVM are the edge weights between all genes and the genes in the JAE sig gene set. For each of the 100 SVM models, we used the JAE sig gene set genes as the true positives, while the true negatives were selected at random from outside of that gene set. Each true negative set was selected to have the same number of genes as were in the true positive set.
 
 ### A. Train SVM using the significant genes and the specified functional network
 
 ```{r train_SVM}
-#set paramaters
-n.SVM <- 100 #number of SVMs to run
-n.cores = detectCores()-1 #The number of cores to use for parallel processing
-
 ##read in amygdala network
 amygdala_net <- read_rds(here("data", "amygdala_top.RData"))
 
@@ -231,7 +277,7 @@ After training the SVM models, we use them to classify each gene, where each gen
 score.candidates(results.mwas.dir, candidate.genes = mwas_genes$GENE)
 ```
 
-## VI. Integrate Gene Information with SVM Output
+## V. Integrate Gene Information with SVM Output
 
 We integrated the SVM scores and FP Rates with the original gene information (including positional information). The function `merge.svm.gene.info.fp()` takes the original gene table (output from MAGMA plus the converted gene names) and adds the mean SVM score and mean FP rate to the genes. It writes out a table for each module with the information for each gene, including the original information from the gene table (entrez ID and gene name), SVM score, and FP rate (Candidate.Gene.Results.rds).
 
@@ -258,8 +304,7 @@ mwas_hippocampus_net_fin_tab <-
   read_rds(here("mwas/mwas_hippocampus_net_dx/results_mwas_hippocampus_net_dx/Module1/Candidate.Gene.Results.rds"))
 ```
 
-
-## VII. Gene Scores and Plotting
+## VI. Gene Scores and Plotting
 
 Each gene is scored based on the integration of SVM false positive (FP) rates, GWAS p-values, and potentially other metrics given the dataset (e.g., expression data). Given two variables (e.g., -log p-value and -log SVM FP rate), the score is based on the number of genes in the area covered by its x,y position. An individual gene with a lot of genes covered in their area will be ranked higher than a gene with fewer. Given only positional information and SVM output, genes can be ranked on their FP rates and mapped by their position (and significant GWAS genes can also be designated from the rest).
 
@@ -361,10 +406,10 @@ gene_rank_plotlyr(score_tab = hippocampus_scores,
                   title = "Hippocampus Interactive Ranking Plot")
 ```
 
-
 ### B. Generating P-value Comparison Plots
 
 #### Compairing ADNI Volume GWAS P-values (Fig 2C)
+
 ```{r}
 amyg_hipp_scores <- amygdala_scores %>% 
   inner_join(hippocampus_scores, by = "name") %>% 
@@ -423,8 +468,8 @@ amyg_hipp_pval_comparison <- amyg_hipp_scores %>%
   )
 ```
 
-
 #### Compairing MWAS p-values to ADNI Volume GWAS p-values (Figs 2D and E)
+
 ```{r}
 mwas_genes_to_bind <- mwas_genes %>% 
   dplyr::select(name, mwas_p = p)
@@ -560,8 +605,8 @@ hv_mwas_p_value_comp_plot <- ggplot(hv_mwas_comp_tab_processed,
   )
 ```
 
-
 #### Pie chart generation (Fig 5)
+
 ```{r}
 amyg_comb_score_revigo <- read_delim(here("results/REVIGO_treemap_amyg_comb_converted.csv"), delim = "\t")
 
@@ -715,4 +760,3 @@ hipp_pval_revigo_for_plotting %>%
     legend.text = element_text(size = 25)
   ) 
 ```
-
