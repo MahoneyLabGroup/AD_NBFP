@@ -24,7 +24,7 @@ Our methodology prioritizes genes based on their functional significance, derive
 
 ## I. Setup
 
-This analysis requires a range of R packages, some of which are available from [CRAN](https://cran.r-project.org) and some of which are available from [Bioconductor](http://bioconductor.org). We've included a comprehensive list of the packages below how to install them. **Please note that this workflow was generated in R 3.6.3 and has not been tested in later versions of the software.**
+This analysis requires a range of R packages, some of which are available from [CRAN](https://cran.r-project.org) and some of which are available from [Bioconductor](http://bioconductor.org). We've included a comprehensive list of the packages below how to install them. **Please note that this workflow was last updated in R 4.0.3 and has not been tested in later versions of the software.**
 
 ### Package installation
 
@@ -87,25 +87,15 @@ project.dir <- here()
 code.dir <- here("code")
 data.dir <- here("data")
 results.dir <- here("results")
-figure.dir <- here("figures")
-
-#ADNI Results Directories
-results.adni.dir <- here("adni")
-
-results.adni.av.dir <- here("adni", "adni_av")
-results.adni.hv.dir <- here("adni", "adni_hv")
-
-results.adni.hippocampus.net.hv.dir <- here("adni", "adni_hv", "results_adni_hippocampus_net_hv")
-results.adni.amygdala.net.av.dir <- here("adni", "adni_av", "results_adni_amygdala_net_av")
 
 #MetaGWAS Results Directories
-results.mwas.dir <- here("mwas")
-
 results.mwas.amygdala.net.dx.dir <- here("mwas", "mwas_amygdala_net_dx")
 results.mwas.hippocampus.net.dx.dir <- here("mwas", "mwas_hippocampus_net_dx")
 ```
 
 ### C. Source the Code Used in the Project
+
+This chunk will read in all of the custom functions written to format the networks and run the machine learner.
 
 ```{r source_code}
 all.fun.dir <- list.files(code.dir, full.names = TRUE)
@@ -134,10 +124,12 @@ if(!file.exists(hum_amygdala.net)){
 
 ### E. Set SVM Hyper-Parameters
 
+We chose a value of 100 SVMs based on the work done in Guan et al. (2010), however a higher or lower number can be specified if desired. We've also allowed the user to specify the number of cores to use for running the models as its computationally intensive and can severely slow computers with less processing power.
+
 ```{r}
 #set paramaters
 n.SVM <- 100 #number of SVMs to run
-n.cores = detectCores()-1 #The number of cores to use for parallel processing
+n.cores <- detectCores()-1 #The number of cores to use for parallel processing
 
 ```
 
@@ -145,7 +137,7 @@ n.cores = detectCores()-1 #The number of cores to use for parallel processing
 
 ### A. Load MAGMA Results
 
-SNP-level summary statistics were retrieved from the ADNI and Jansen et al. 2019 as stated above. We mapped SNP-level statistics to gene-level using Multi-marker Analysis of GenoMic Annotation [(MAGMA)](<https://ctg.cncr.nl/software/magma>). We used a 10kb annotation window around each gene and used the NCBI hg37 reference genome. LD estimations were done using the 1000 Genome's project CEU population. The MAGMA output will have columns for gene, chromosome, start and stop positions, number of SNPs, N number of samples, Z statistic, and p-value.
+SNP-level summary statistics were retrieved from the ADNI and Jansen et al. 2019 as stated above. We mapped SNP-level statistics to gene-level using Multi-marker Analysis of GenoMic Annotation [(MAGMA)](https://ctg.cncr.nl/software/magma). We used a 10kb annotation window around each gene and used the NCBI hg37 reference genome. LD estimations were done using the 1000 Genome's project CEU population. The MAGMA output has columns for gene, chromosome, start and stop positions, number of SNPs, N number of samples, Z statistic, and p-value. The gene-level summary statistics are provided in the GitHub repository along with this workflow, and will be read into the work-space with the following chunk.
 
 ```{r}
 #Hippocampal Volume
@@ -211,7 +203,7 @@ mwas_genes %<>% inner_join(mwas_gconvert, by = "gene")
 
 ## III. Significant Genes (Positional Candidates)
 
-Find significant genes by filtering the gene list for genes with a p-value below 0.01. These genes will be used to train the SVM. (Note: only gene Entrez IDs are needed for training) These genes represent positional candidates.
+Find significant genes by filtering the gene list for genes with a nominal p-value below 0.01. These genes will be used to train the SVM. (Note: only gene Entrez IDs are needed for training) These genes represent positional candidates.
 
 ```{r sig_genes}
 mwas_sig_genes <- mwas_genes %>% 
@@ -220,17 +212,20 @@ mwas_sig_genes <- mwas_genes %>%
 
 ## IV. SVM
 
-We ran the SVM analysis separately for each of the gene lists pulled from the epilepsy GWAS paper (here we use JAE). The SVMs were trained to distinguish genes in the significant gene list from randomly chosen genes from outside the list. We use the function generate.triage.models() to accomplish this, which uses the `svm` function in the package `e1071` [@e1071]. The features used by the SVM are the edge weights between all genes and the genes in the JAE sig gene set. For each of the 100 SVM models, we used the JAE sig gene set genes as the true positives, while the true negatives were selected at random from outside of that gene set. Each true negative set was selected to have the same number of genes as were in the true positive set.
+We ran the SVM analysis on the meta-GWAS genes using the amygdala network and then the hippocampus network. The SVMs were trained to distinguish genes in the significant gene list from randomly chosen genes from outside the list. We use the function generate.triage.models() to accomplish this, which uses the `svm` function in the package `e1071` [@e1071]. The features used by the SVM are the edge weights between all genes and the genes in the meta-GWAS significant gene set. For each of the 100 SVM models, we used the meta-GWAS significant gene set genes as the true positives, while the true negatives were selected at random from outside of that gene set. Each true negative set was selected to have the same number of genes as were in the true positive set.
 
 ### A. Train SVM using the significant genes and the specified functional network
 
+**Be aware that the final scored tables are stored in the sub-directories of the `mwas`** **directory and can be read in under the Section V. B code chunk below. The interceding chunks which calculate the ROC curves, score the models, and merge the SVM results to the GWAS data have `if`** **statements which will prevent premature running of the chunks as they are memory intensive.**
+
 ```{r train_SVM}
+if(FALSE){
 ##read in amygdala network
 amygdala_net <- read_rds(here("data", "amygdala_top.RData"))
 
 
 #1. MWAS Diagnosis | Amygdala Network
-generate.triage.models(path = results.mwas.dir, 
+generate.triage.models(path = results.mwas.amygdala.net.dx.dir, 
                        project.name = "results_mwas_amygdala_net_dx", 
                        trait.genes = mwas_sig_genes$GENE,
                        fgn = amygdala_net, 
@@ -246,7 +241,7 @@ rm(amygdala_net)
 hippocampus_net <- here(data.dir, "hippocampus_top.RData")
 
 #2. MWAS Diagnosis | Hippocampus Network
-generate.triage.models(path = results.mwas.dir, 
+generate.triage.models(path = results.mwas.hippocampus.net.dx.dir, 
                        project.name = "results_mwas_hippocampus_net_dx", 
                        trait.genes = mwas_sig_genes$GENE,
                        fgn = hippocampus_net, 
@@ -258,23 +253,29 @@ generate.triage.models(path = results.mwas.dir,
 
 ##remove hippocampus network once svms have run to free up RAM
 rm(hippocampus_net)
+}
 ```
 
 ### B. ROC curves
 
-Following training of the SVM models, we evaluted them by generating ROC curves to test how well the models separate genes annotated to the network from genes in the rest of the genome. To do this, use the svm.ROC function, which plots the false positive rate against the true positive rate of the SVM model across the full range of prediction values. An area under the ROC curve (AUC) indicates how well the model does overall (AUC 0.5 means model performs at random chance, AUC 1 means model has perfect classification)
+Following training of the SVM models, we evaluated them by generating ROC curves to test how well the models separate genes annotated to the network from genes in the rest of the genome. To do this, use the svm.ROC function, which plots the false positive rate against the true positive rate of the SVM model across the full range of prediction values. An area under the ROC curve (AUC) indicates how well the model does overall (AUC 0.5 means model performs at random chance, AUC 1 means model has perfect classification)
 
 ```{r ROC_curve}
+if(FALSE){
 svm.ROC(results.mwas.amygdala.net.dx.dir, n.cores = n.cores, plot.results = TRUE)
 svm.ROC(results.mwas.hippocampus.net.dx.dir, n.cores = n.cores, plot.results = TRUE)
+}
 ```
 
 ### C. Apply the trained models to genes
 
-After training the SVM models, we use them to classify each gene, where each gene recieves a score from each SVM indicating whether the model identifies it as part of the [network] gene list (a positive score) or not part of the gene list (negative score). The score.candidates function writes out all of the values to two csv tables (Candidate.Gene.SVM.Scores.csv and Candidate.Gene.FP.Rates.csv). The function also plots boxplots of the distributions of the SVM scores and the false positive (FP) rates for each gene in two jpgs (Candidate.Gene.SVM.Scores.jpg, and Candidate.Gene.FP.Rates.jpg). Plots are ordered by mean value. The genes that are on the left are classified confidently by the SVM as being related to the [network] gene list. The distributions of their SVM scores do not cross 0. The genes on the right hand side are classified confidently by the SVM as not being related to the [network] gene list. The genes in between are less confidently classified across the SVM trials.
+After training the SVM models, we use them to classify each gene, where each gene receives a score from each SVM indicating whether the model identifies it as part of the [network] gene list (a positive score) or not part of the gene list (negative score). The score.candidates function writes out all of the values to two csv tables (Candidate.Gene.SVM.Scores.csv and Candidate.Gene.FP.Rates.csv). The function also plots boxplots of the distributions of the SVM scores and the false positive (FP) rates for each gene in two jpgs (Candidate.Gene.SVM.Scores.jpg, and Candidate.Gene.FP.Rates.jpg). Plots are ordered by mean value. The genes that are on the left are classified confidently by the SVM as being related to the [network] gene list. The distributions of their SVM scores do not cross 0. The genes on the right hand side are classified confidently by the SVM as not being related to the [network] gene list. The genes in between are less confidently classified across the SVM trials.
 
 ```{r score_candidates}
-score.candidates(results.mwas.dir, candidate.genes = mwas_genes$GENE)
+if(FALSE){
+score.candidates(results.mwas.amygdala.net.dx.dir, candidate.genes = mwas_genes$gene)
+score.candidates(results.mwas.hippocampus.net.dx.dir, candidate.genes = mwas_genes$gene)
+}
 ```
 
 ## V. Integrate Gene Information with SVM Output
@@ -285,7 +286,6 @@ We integrated the SVM scores and FP Rates with the original gene information (in
 
 ```{r merge_info}
 if(FALSE){
-
 #MWAS Diagnosis | Amygdala Network
 mwas_amygdala_net_fin_tab <- merge.gene.svm.fp(results.mwas.amygdala.net.dx.dir, mwas_genes, gene.column.name = "gene")
 
@@ -298,10 +298,10 @@ mwas_hippocampus_net_fin_tab <- merge.gene.svm.fp(results.mwas.hippocampus.net.d
 
 ```{r}
 mwas_amygdala_net_fin_tab <- 
-  read_rds(here("mwas/mwas_amygdala_net_dx/results_mwas_amygdala_net_dx/Module1/Candidate.Gene.Results.rds"))
+  read_rds(here("results/Amygdala.Candidate.Gene.Results.rds"))
 
 mwas_hippocampus_net_fin_tab <- 
-  read_rds(here("mwas/mwas_hippocampus_net_dx/results_mwas_hippocampus_net_dx/Module1/Candidate.Gene.Results.rds"))
+  read_rds(here("results/Hippocampus.Candidate.Gene.Results.rds"))
 ```
 
 ## VI. Gene Scores and Plotting
@@ -312,11 +312,15 @@ Each gene is scored based on the integration of SVM false positive (FP) rates, G
 
 ```{r integrated_rankings}
 
+#Extract the gene names and p-values from the Amygdalar Volume GWAS
 amyg_adni_scores <- av_adni_genes %>% 
   dplyr::select(name, av_p = p)
+
+#Extract the gene names and the Amygdalar functional scores for the meta-GWAS
 mwas_amyg_scores <- mwas_amygdala_net_fin_tab %>% 
   dplyr::select(name, mwas_amyg_fp = mean_fp_rate)
 
+#Join the two amygdalar datasets and calculate the combined score.
 amygdala_scores <- amyg_adni_scores %>% 
   inner_join(mwas_amyg_scores, by = "name") %>% 
   mutate(
@@ -328,11 +332,15 @@ amygdala_scores <- amyg_adni_scores %>%
   ungroup() %>%
   mutate(comb_score_amyg = comb_score_amyg/n())
 
+#Extract gene names and Hippocampal Volume GWAS p-values
 hipp_adni_scores <- hv_adni_genes %>% 
   dplyr::select(name, hv_p = p)
+
+#Extract gene names and the Hippocampal functional scores for the meta-GWAS
 mwas_hipp_scores <- mwas_hippocampus_net_fin_tab %>% 
   dplyr::select(name, mwas_hipp_fp = mean_fp_rate)
 
+#Join the two hippocampal datasets and calculate the combined score.
 hippocampus_scores <- hipp_adni_scores %>% 
   inner_join(mwas_hipp_scores, by = "name") %>% 
   mutate(
@@ -345,7 +353,7 @@ hippocampus_scores <- hipp_adni_scores %>%
   mutate(comb_score_hipp = comb_score_hipp/n())
 
 
-#1. Amygdala Volume | Amygdala Network
+#1. Generate Amygdala tissue combined plot using custom plotting function
 amyg_scores_comb_plot <- gene_rank_plotr(score_tab = amygdala_scores,
                 gene_col = "name",
                 log_pval_col = "av_log_p",
@@ -368,7 +376,7 @@ amyg_scores_comb_plot <- gene_rank_plotr(score_tab = amygdala_scores,
     panel.grid.minor = element_blank()
     )
 
-#2. Hippocampus Volume | Hippocampus Network
+#2. Generate Hippocampal tissue combined plot using custom plotting function
 hipp_scores_comb_plot <- gene_rank_plotr(score_tab = hippocampus_scores,
                 gene_col = "name",
                 log_pval_col = "hv_log_p",
@@ -408,9 +416,11 @@ gene_rank_plotlyr(score_tab = hippocampus_scores,
 
 ### B. Generating P-value Comparison Plots
 
-#### Compairing ADNI Volume GWAS P-values (Fig 2C)
+#### Comparing ADNI Volume GWAS P-values (Fig 2C)
 
 ```{r}
+
+#Join the amygdala and hippocampus score data.frames generated above and calculate a combined ranking for plot color and text labelling purposes.
 amyg_hipp_scores <- amygdala_scores %>% 
   inner_join(hippocampus_scores, by = "name") %>% 
   select(name, av_log_p, hv_log_p, mwas_log_amyg_fp, mwas_log_hipp_fp, comb_score_amyg, comb_score_hipp) %>% 
@@ -419,6 +429,7 @@ amyg_hipp_scores <- amygdala_scores %>%
   ungroup() %>%
   mutate(comb_score = comb_score/n())
   
+#Generate the comparison plot! Colors were taken from the viridis package palette.
 amyg_hipp_pval_comparison <- amyg_hipp_scores %>% 
   ggplot(aes(hv_log_p, av_log_p)) +
   geom_point(color = "grey", size = 5) +
@@ -468,7 +479,7 @@ amyg_hipp_pval_comparison <- amyg_hipp_scores %>%
   )
 ```
 
-#### Compairing MWAS p-values to ADNI Volume GWAS p-values (Figs 2D and E)
+#### Comparing MWAS p-values to ADNI Volume GWAS p-values (Figs 2D and E)
 
 ```{r}
 mwas_genes_to_bind <- mwas_genes %>% 
