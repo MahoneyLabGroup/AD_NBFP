@@ -48,6 +48,8 @@ cran_pkgs <- c("tidyverse",
                "viridis",
                "scales")
 
+install.packages(cran_pkgs)
+
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 BiocManager::install(pkgs = "biomaRt")
@@ -55,7 +57,7 @@ BiocManager::install(pkgs = "biomaRt")
 
 ### A. Package Setup
 
-```{r setup, include=FALSE}
+```{r include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 all.packages <- c("tidyverse", 
                   "here", 
@@ -75,7 +77,8 @@ all.packages <- c("tidyverse",
                   "ggpubr",
                   "ggpmisc",
                   "viridis",
-                  "scales")
+                  "scales",
+                  "magrittr")
 for(i in 1:length(all.packages)){library(all.packages[i], character.only = TRUE)} 
 conflict_prefer("filter", "dplyr")
 ```
@@ -216,7 +219,7 @@ We ran the SVM analysis on the meta-GWAS genes using the amygdala network and th
 
 ### A. Train SVM using the significant genes and the specified functional network
 
-**Be aware that the final scored tables are stored in the sub-directories of the `mwas`** **directory and can be read in under the Section V. B code chunk below. The interceding chunks which calculate the ROC curves, score the models, and merge the SVM results to the GWAS data have `if`** **statements which will prevent premature running of the chunks as they are memory intensive.**
+**Be aware that the final scored tables are stored in the sub-directories of the `mwas`** **directory and can be read in under the Section V. B code chunk below. The interceding chunks which calculate the ROC curves, score the models, and merge the SVM results to the GWAS data have `if`** **statements which will prevent premature running of the chunks as they are memory and time intensive.**
 
 ```{r train_SVM}
 if(FALSE){
@@ -280,7 +283,7 @@ score.candidates(results.mwas.hippocampus.net.dx.dir, candidate.genes = mwas_gen
 
 ## V. Integrate Gene Information with SVM Output
 
-We integrated the SVM scores and FP Rates with the original gene information (including positional information). The function `merge.svm.gene.info.fp()` takes the original gene table (output from MAGMA plus the converted gene names) and adds the mean SVM score and mean FP rate to the genes. It writes out a table for each module with the information for each gene, including the original information from the gene table (entrez ID and gene name), SVM score, and FP rate (Candidate.Gene.Results.rds).
+We integrated the SVM scores and FP Rates with the original gene information (including positional information). The function `merge.svm.gene.info.fp()` takes the original gene table (output from MAGMA plus the converted gene names) and adds the mean SVM score and mean FP rate to the genes. It writes out a table for each module with the information for each gene, including the original information from the gene table (entrez ID and gene name), SVM score, and FP rate (Candidate.Gene.Results.rds). **For full reproducibility of this project, the scored and merged tables can be read into R using chunk V.B below.**
 
 ### A. Merge SVM results with GWAS info
 
