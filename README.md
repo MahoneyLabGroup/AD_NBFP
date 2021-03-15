@@ -4,7 +4,7 @@ This repository contains all the code necessary to replicate the analysis perfor
 
 # Organization
 ---
-* The methods.Rmd file contains all the code to replicate the analysis. Please read the text as it contains information on files that are available to be read in as well as how to run the SVMs on your own.
+* The `methods.Rmd` file contains all the code to replicate the analysis. Please read the text as it contains information on files that are available to be read in as well as how to run the SVMs on your own.
 * The *code* directory contains all the custom source code needed to run the analysis. 
 * The *data* directory contains the gene-level summary statistics for the ADNI and MetaGWAS data. It is also the location where the genetic networks will be stored once downloaded from [HumanBase](https://hb.flatironinstitute.org).
 * The *mwas* directory will contain the results from the SVMs once that code is run. The full results are too large to upload to GitHub, though we have included a final scored and merged results table for both brain tissues which can be found in the *results* directory along with results from REVIGO that are used to construct the pie charts.
